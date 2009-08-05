@@ -1,4 +1,4 @@
-import pubmed_fetchr
+import pubmedpy
 
 DRUG  = 0
 PMID = 2
@@ -26,7 +26,7 @@ def download_cohen():
 
 def get_labels():
     drugs_to_lbls = {}
-    cohen = open("COHEN.tsv", "r").readlines()
+    cohen = open("cohen.tsv", "r").readlines()
     cohen = [c.replace("\n", "").split("\t") for c in cohen]
     drugs = list(set([c[DRUG] for c in cohen]))
     for d in drugs:

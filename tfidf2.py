@@ -156,7 +156,6 @@ def tdidf(wordfreqs, freqvecs):
         
       tdfvecs[cur_key]=tdfvec
     
-   
     return tdfvecs
   
 
@@ -168,25 +167,25 @@ def build_word_count_vector_for_doc(words, doc):
     return count_vec
 
     
-def build_bag_of_words_feature_vectors(ids_to_texts, words, encode_binary=False):
+def build_bag_of_words_feature_vectors(ids_to_texts, words, binary_encode=False):
     freq_vecs = {}
     for id in ids_to_texts.keys():
-        if not encode_binary:
+        if not binary_encode:
             freq_vecs[id] = build_word_count_vector_for_doc(words, ids_to_texts[id])
         else:
             # binary encoding -- 1or 0 for each word (present or not, respectively)
             doc = ids_to_texts[id]
-            freq_vecs[i] = [1.0 if word in doc else 0.0 for word in words]
+            freq_vecs[id] = [1.0 if word in doc else 0.0 for word in words]
 	
-    if encode_binary:
+    if binary_encode:
         return freq_vecs
         
     word_freqs = [sum([ids_to_texts[id].count(w) for id in ids_to_texts.keys()]) for w in words]
     return tdidf(word_freqs, freq_vecs)
 
 
-def build_bag_of_words_over_dir(dir_path, split_txt_on = " ", binary_encode = False, word_index_path = "word_index.txt", 
-                                                    min_word_count = 3):
+def build_bag_of_words_over_dir(dir_path, split_txt_on = " ", binary_encode = False, 
+                                                    word_index_path = "word_index.txt",  min_word_count = 3):
     '''
     Build bag of words representation vectors over *all of the documents* in dir_path.
     Note that we assume the documents are already clean.
@@ -203,34 +202,34 @@ def build_bag_of_words_over_dir(dir_path, split_txt_on = " ", binary_encode = Fa
           pass
     
     unique_word_dict = {}
-    print "making a set..."
     set_words = list(set(s_words))
-    print "done."
     for w in set_words:
         unique_word_dict[w] = 0
     
     ids_to_txt = {}
     words = []
+    # ignore the word_index.txt file, which we generated
     for p in [f for f in files_in_dir if not f == "word_index.txt"]:
-        curtxt =[""]
+        cur_txt =[""]
         try:
-            curtxt = open(os.path.join(dir_path, p), 'r').readline().split(split_txt_on)
-            for word in curtxt:
+            cur_txt = open(os.path.join(dir_path, p), 'r').readline().split(split_txt_on)
+            for word in cur_txt:
                 unique_word_dict[word] += 1
         except  Exception, e:
             # abstract is missing!
             pass
         
         id = p.split(".")[0]
-        ids_to_txt[id] = curtxt
-        words.extend(curtxt)
+        ids_to_txt[id] = cur_txt
+        words.extend(cur_txt)
     
     print "number of words: %s; number of unique words: %s" % (len(words), len(set_words))
     words = [word for word in unique_word_dict.keys() if unique_word_dict[word] >= min_word_count]
     word_index_out = open(word_index_path, 'w')
     word_index_out.write(str(words))
     word_index_out.close()
-    return build_bag_of_words_feature_vectors (ids_to_txt,  words)
+    pdb.set_trace()
+    return build_bag_of_words_feature_vectors (ids_to_txt,  words, binary_encode=binary_encode)
 
 
 def clean_up_txt(doc, keep=string.ascii_letters):
@@ -284,20 +283,45 @@ def clean_up_docs(dir_path, out_dir = None, overwrite_dirty=False):
 #   File encoding routines
 #
 ################################################################
-def tfidf_to_file_for_lib_SVM(tfidf, pos_indices, out_path):
+def tfidf_to_file_for_lib_SVM(tfidf, pos_ids, out_path):
     out_s  = []
     for id in tfidf.keys():
         lbl = None
-        if pos_indices is None:
+        if pos_ids is None:
             lbl = "?"
         else:
             lbl = -1
-            if id in pos_indices:
+            if id in pos_ids:
                 lbl = 1
         out_s.append(lib_svm_str(lbl, tfidf[id]))
 
     open(out_path, "w").write("\n".join(out_s))
           
+    
+def tfidf_to_file_for_lib_SVM_multi_label(tfidf, level1_pos_ids, level2_pos_ids, out_path):
+    ''' For the abstract screening scenario, in which there are two 'levels' of labels. '''
+    out_s  = []
+    for id in tfidf.keys():
+        level1_lbl, level2_lbl = None, None
+        
+        if level1_pos_ids is None:
+            level1_lbl = "?"
+        else:
+            level1_lbl = -1
+            if id in level1_pos_ids:
+                level1_lbl = 1
+                
+        if level2_pos_ids is None:
+            level2_lbl = "?"
+        else:
+            level2_lbl = -1
+            if id in level2_pos_ids:
+                level2_lbl = 1
+        out_s.append(lib_svm_str_multi_label(id, level1_lbl, level2_lbl, tfidf[id]))
+
+    open(out_path, "w").write("\n".join(out_s))
+    
+    
 def lib_svm_str(lbl, x):
     ''' Returns a (sparse-format) feature vector string for the provided example'''
     x_str = [str(lbl)]
@@ -306,10 +330,17 @@ def lib_svm_str(lbl, x):
             x_str.append("%s:%s" % (i, x[i]))
     return " ".join(x_str)
   
+def lib_svm_str_multi_label(id, level1_lbl, level2_lbl, x):
+    x_str = " ".join([str(id), str(level1_lbl), str(level2_lbl)])
+    for i in range(len(x)):
+        if x[i] > 0.0:
+            x_str.append("%s:%s" % (i, x[i]))
+    return " ".join(x_str)
 
 def generate_weka_file(labels, frequency_vectors, words, out_path):
     '''
-    Builds and writes out a WEKA formatted file with the word frequencies as attributes for each instance.
+    Builds and writes out a WEKA formatted file with the word frequencies 
+    as attributes for each instance.
     '''
     weka_str = ["@RELATION abstracts"]
     for i in range(len(words)):
@@ -351,22 +382,28 @@ def _mkdir(newdir):
         head, tail = os.path.split(newdir)
         if head and not os.path.isdir(head):
             _mkdir(head)
-        #print "_mkdir %s" % repr(newdir)
         if tail:
             os.mkdir(newdir)
 
 
 ################################################################
 #
-#  Unit tests! (use nose)
+#  Unit tests! Use nose 
+#           [http://somethingaboutorange.com/mrl/projects/nose/0.11.1/]. 
+#  
+#   e.g., while in this directory:
+#           > nosetests tfidf2
 #
 ################################################################
 
+@nose.with_setup(clean_datasets, remove_cleaned)
 def binary_encode_test():
-    #bag = build_bag_of_words_over_dir("test_corpus")
-    assert True
-    #word_list = build_word_list(corpus, k=1)
-    #assert "hello" in word_list and "everyone" in word_list and "world" in word_list and len(word_list) == 3
+    bow = build_bag_of_words_over_dir(os.path.join("test_corpus", "cleaned"), min_word_count=1, 
+                                                            binary_encode = True)
+    # hand verified
+    assert(bow["1"] == [0.0, 1.0, 0.0, 1.0])
+    assert(bow["2"] == [1.0, 0.0, 1.0, 1.0])
+
     
 def clean_datasets():
     clean_path = os.path.join("test_corpus", "cleaned")
@@ -389,7 +426,6 @@ def tf_idf_test():
     assert(bow["2"] == [0.70710678118654746, 0.0, 0.0, 0.70710678118654746])
    
 
-    
 @nose.with_setup(clean_datasets, remove_cleaned)
 def clean_docs_test():
     d1, d2 = [open(p, "r").readline() for p in clean_paths()]

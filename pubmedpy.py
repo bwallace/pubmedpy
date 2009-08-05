@@ -4,7 +4,7 @@
 # 
 # The MIT License
 # 
-# Copyright (c) 2009 Byron Wallace
+# Copyright (c) 2009 Byron C Wallace
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -69,7 +69,8 @@ def main(argv=None):
 def set_email(email):
     Entrez.email = email
 
-def fetch_and_encode(article_ids, out_dir, binary_features=False, labels=None, fields = ["AB", "TI"], out_f_name = ""):
+def fetch_and_encode(article_ids, out_dir, binary_features=False, 
+                                    labels=None, fields = ["AB", "TI"], out_f_name = ""):
     '''
     First fetches from the web, then encodes them.
     '''
