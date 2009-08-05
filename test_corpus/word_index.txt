@@ -1,0 +1,1 @@
+['like', 'monkeys!', 'monkeys.', 'Humans', 'are', 'Snakes']
