@@ -152,8 +152,7 @@ def tdidf(wordfreqs, freqvecs):
   
       if cur_key in tdfvecs:
         print "Error -- key (doc id) already exists???"
-        pdb.set_trace()
-        
+       
       tdfvecs[cur_key]=tdfvec
     
     return tdfvecs
@@ -194,7 +193,9 @@ def build_bag_of_words_over_dir(dir_path, split_txt_on = " ", binary_encode = Fa
     # read all the words in 
     word_index_path = os.path.join(dir_path, word_index_path)
     s_words = []
-    files_in_dir = [f for f in os.listdir(dir_path) if not os.path.isdir(os.path.join(dir_path, f))]
+    files_in_dir = [f for f in os.listdir(dir_path) if not os.path.isdir(os.path.join(dir_path, f)) and not f.startswith(".")]
+    print "**\n\n"
+    print files_in_dir
     for p in files_in_dir:
       try:
           s_words.extend(open(os.path.join(dir_path, p), 'r').readlines()[0].split(" "))
@@ -228,7 +229,7 @@ def build_bag_of_words_over_dir(dir_path, split_txt_on = " ", binary_encode = Fa
     word_index_out = open(word_index_path, 'w')
     word_index_out.write(str(words))
     word_index_out.close()
-    pdb.set_trace()
+
     return build_bag_of_words_feature_vectors (ids_to_txt,  words, binary_encode=binary_encode)
 
 
@@ -396,15 +397,6 @@ def _mkdir(newdir):
 #
 ################################################################
 
-@nose.with_setup(clean_datasets, remove_cleaned)
-def binary_encode_test():
-    bow = build_bag_of_words_over_dir(os.path.join("test_corpus", "cleaned"), min_word_count=1, 
-                                                            binary_encode = True)
-    # hand verified
-    assert(bow["1"] == [0.0, 1.0, 0.0, 1.0])
-    assert(bow["2"] == [1.0, 0.0, 1.0, 1.0])
-
-    
 def clean_datasets():
     clean_path = os.path.join("test_corpus", "cleaned")
     _mkdir(clean_path)
@@ -418,17 +410,31 @@ def remove_cleaned():
     for f in clean_paths():
         os.remove(f)
     
+  
+@nose.with_setup(clean_datasets, remove_cleaned)
+def binary_encode_test():
+    print 'bin encode'
+    bow = build_bag_of_words_over_dir(os.path.join("test_corpus", "cleaned"), min_word_count=1, 
+                                                            binary_encode = True)
+    # hand verified
+    assert(bow["1"] == [0.0, 1.0, 0.0, 1.0])
+    assert(bow["2"] == [1.0, 0.0, 1.0, 1.0])
+
 @nose.with_setup(clean_datasets, remove_cleaned)
 def tf_idf_test():
     bow = build_bag_of_words_over_dir(os.path.join("test_corpus", "cleaned"), min_word_count=1)
+    print "\n\n"
+    print bow.keys()
+    print bow
     # these are hand calculated / verified
     assert(bow["1"] == [0.0, 1.0, 0.0, 0.0])
-    assert(bow["2"] == [0.70710678118654746, 0.0, 0.0, 0.70710678118654746])
-   
+    
+    assert(bow["2"] == [0.70710678118654746, 0.0, 0.70710678118654746, 0.0])
 
 @nose.with_setup(clean_datasets, remove_cleaned)
 def clean_docs_test():
+    print 'clean docs'
     d1, d2 = [open(p, "r").readline() for p in clean_paths()]
     assert(d1 == "humans monkeys")
     assert(d2 == "snakes like monkeys")
-
+  
