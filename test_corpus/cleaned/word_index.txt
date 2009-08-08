@@ -1,1 +1,1 @@
-['snakes', 'humans', 'like', 'monkeys']
+like monkeys monkeys humans snakes

@@ -85,6 +85,7 @@ def encode_docs(dir_path, out_path, out_f_name, lbl_dict=None, clean_first=True)
     if clean_first:
         print "cleaning documents.."
         clean_docs_path = os.path.join(dir_path, "cleaned")
+        os.mkdir(clean_docs_path)
         clean_up_docs(dir_path, out_dir = clean_docs_path)
         print "done cleaning."
     else:
@@ -195,7 +196,7 @@ def build_bag_of_words_over_dir(dir_path, split_txt_on = " ", binary_encode = Fa
     s_words = []
     files_in_dir = [f for f in os.listdir(dir_path) if not os.path.isdir(os.path.join(dir_path, f)) and not f.startswith(".")]
     print "**\n\n"
-    print files_in_dir
+
     for p in files_in_dir:
       try:
           s_words.extend(open(os.path.join(dir_path, p), 'r').readlines()[0].split(" "))
@@ -410,7 +411,6 @@ def remove_cleaned():
     for f in clean_paths():
         os.remove(f)
     
-  
 @nose.with_setup(clean_datasets, remove_cleaned)
 def binary_encode_test():
     print 'bin encode'

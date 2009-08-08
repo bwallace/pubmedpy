@@ -55,6 +55,7 @@ from Bio import Medline
 import tfidf2 
 
 def main(argv=None):
+  ''' This simply fetches - does not encode - pub med documents '''
   parser = OptionParser()
   parser.add_option("-e", "--email", action="store", type="string", dest="email")
   parser.add_option("-s", "--search_string", action="store", type="string", dest="search_str")
@@ -70,9 +71,12 @@ def set_email(email):
     Entrez.email = email
 
 def fetch_and_encode(article_ids, out_dir, binary_features=False, 
-                                    labels=None, fields = ["AB", "TI"], out_f_name = ""):
+                                    lbl_dict=None, fields = ["AB", "TI"], out_f_name = ""):
     '''
     First fetches from the web, then encodes them.
+    
+    lbl_dict is assumed to be a dictionary mapping ids to labels. If it is not provided
+    documents will be encoded with a "?" as their label.
     '''
     # first, fetch the articles
     fetch_and_write_out(article_ids, out_dir, fields = fields)
@@ -81,7 +85,8 @@ def fetch_and_encode(article_ids, out_dir, binary_features=False,
         print "encoding %s..." %field
         # now, clean and encode them
         out_for_field = os.path.join(out_dir, field)
-        tfidf2.encode_docs(out_for_field, os.path.join(out_for_field, "encoded"), out_f_name + field)
+        tfidf2.encode_docs(out_for_field, os.path.join(out_for_field, "encoded"), 
+                            out_f_name + field, lbl_dict=lbl_dict)
     print "finito."
     
 def fetch_and_write_out(article_ids, base_out_dir, fields = ["AB", "TI", "RN", "MH", "PT", "AU"]):
@@ -92,7 +97,7 @@ def fetch_articles(article_ids):
     print "Fetching abstracts..."
     handle = Entrez.efetch(db="pubmed",id=article_ids,rettype="medline",retmode="text")
     records = Medline.parse(handle)
-    print "Done." 
+    print "ok"
     return records   
     
 def batch_fetch(article_ids, batch_size=100):
@@ -116,7 +121,8 @@ def article_search(db, search_str):
  
 def write_out_fields(field_keys, records, base_out_dir):
     # make a directory for each field
-    os.mkdir(base_out_dir)
+    if not os.path.exists(base_out_dir):
+        os.mkdir(base_out_dir)
     for field in field_keys:
       os.mkdir(os.path.join(base_out_dir, field))
     # write out 
