@@ -65,27 +65,51 @@ def parse_pubmed_xml(filename):
     for citation in citations:
         ids.append(citation["MedlineCitation"]["PMID"])
         names = []
-	i +=1 
-	#print i
-	try: 
+    i +=1 
+    #print i
+    try: 
             author_list = citation["MedlineCitation"]["Article"]["AuthorList"]
         except KeyError: 
-	    #print "****"
-	    errorStr = "no authors in citation " +  str(i)
-	    author_list = [{"CollectiveName":errorStr}]
-	for who in range(len(author_list)): 
+        #print "****"
+        errorStr = "no authors in citation " +  str(i)
+        author_list = [{"CollectiveName":errorStr}]
+    for who in range(len(author_list)): 
             if author_list[who].keys()[0]=="LastName":
                 lastname = author_list[who]["LastName"]
-	        initials = author_list[who]["Initials"]
+                try: 
+                    initials = author_list[who]["Initials"]
+                except KeyError: 
+                	initials = "no initials for this person"
                 new_name = lastname.lower() + "_" + initials.lower() 
-	    else: 
-	        newname = author_list[who]["CollectiveName"].lower()
-	    names.append(new_name)
-        authors.append(names)
+        else: 
+            newname = author_list[who]["CollectiveName"].lower()
+        names.append(new_name)
+    authors.append(names)
 
     # close the handle!!! 
     in_handle.close()
     return (ids, authors)
+
+
+# this tells you if two authornames match 
+def is_this_the_same_author(author1, author2):
+    """Returns true if the "Surname IM" and the initials are identical - handles 
+    unicode"""
+    
+    if (author1==author2) & (author1!=""):
+        return (True, "Identical")
+    elif (author1==author2) & (author1==""):
+        return (False, "Both authornames==''")
+    else:
+        if (len(author1)<len(author2)):
+	    if author2.count(author1)==1:
+	        return (True, "Ignoring (some) initials")
+	else: 
+	    if author1.count(author2)==1:
+	        return (True, "Ignoring (some) initials")
+    
+    # if nothing matches
+    return (False, "No match")
 
 
 
@@ -99,17 +123,21 @@ def how_many_common(list1, list2):
     same = 0
     for w1 in l1:
         for w2 in l2:
-	    if w1==w2:
-	        same +=1
-	    else:
-	        if (len(w1) < len(w2)):
-		    if w2.count(w1)==1:    # is one a substring (initials problem) 
-		        same +=1
-		else: 
-		    if w2.count(w1)==1:
-		        same +=1
-	       
-    return same
+            same += is_this_the_same_author(w1,w2)[0]
+    return same 
+    
+# the comparison is now handled by a function 
+#        if w1==w2:
+#           same +=1
+#        else:
+#            if (len(w1) < len(w2)):
+#            if w2.count(w1)==1:    # is one a substring (initials problem) 
+#                same +=1
+#        else: 
+#            if w2.count(w1)==1:
+#                same +=1
+#           
+#    return same
 
 
 #now write the graph-viz file
@@ -123,14 +151,14 @@ def author_network(ids, authors, out_filename):
     for first in range(0, len(ids)-2,1):
         for second in range(first+1,len(ids)-1,1):
             n=how_many_common(authors[first], authors[second])
-	    line = ''
+        line = ''
             if (n>=1):
-	        line = '    "' + ids[first] + '" -- "' + ids[second] + '"\n'
-	    elif (second==first+1):
-	        line = '    "' + ids[first] + '"\n' 
-	    
-	    if line != "":
-	        out_handle.write(line)
+            line = '    "' + ids[first] + '" -- "' + ids[second] + '"\n'
+        elif (second==first+1):
+            line = '    "' + ids[first] + '"\n' 
+        
+        if line != "":
+            out_handle.write(line)
 
     out_handle.write("}\n")
     out_handle.close()
