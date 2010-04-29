@@ -1,0 +1,5 @@
+Python code to create undirected graphs with PMID as nodes, common authors as edge
+Needs Biopython
+
+If you want to try it, in author_net_functions.py use your own e-mail!
+
