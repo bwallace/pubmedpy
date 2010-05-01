@@ -204,12 +204,12 @@ def create_unique_author_list(authors):
         if(how_many_common(unique_author_list, paper_names)==0):
             unique_author_list += paper_names 
         else: 
-	    #print i 
+        #print i 
             for author in paper_names: 
-	        #print unique_author_list
+            #print unique_author_list
                 unique_author_list=augment_unique_author_list(unique_author_list, author)
 
-    return unique_author_list 
+    return unique_author_list
     
 
 def create_author_adj_array(authors):
